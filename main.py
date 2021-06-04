@@ -26,6 +26,6 @@ for i in href_list:
     soup = bs(html, 'html.parser')
     for i in soup.find_all('p',class_='content'):
         text.append(i.text.strip())
-        
+
 print(text)
 browser.quit()   # 브라우저 종료
