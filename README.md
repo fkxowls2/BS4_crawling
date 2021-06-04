@@ -1,1 +1,2 @@
-BS4_Selenium Crawling
+BS4와 Selenium을 활용한 웹스크롤링
+예저는 중앙일보 기사별 댓글을 크롤링함
