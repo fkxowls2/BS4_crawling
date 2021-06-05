@@ -1,31 +1,41 @@
+# EBS "명의" 시청자 게시판 댓글 크롤링
 from bs4 import BeautifulSoup as bs
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-import time
 import urllib
+import re
 
-binary = 'c:/chromedriver/chromedriver.exe'   # 크롬드라이버 파일경로 입력
-browser = webdriver.Chrome(binary)   # 브라우저를 인스턴스화
-# 크롤링할 페이지 주소 입력, 해당 주소로 크롬 열기
-browser.get("https://news.joins.com/Search/JoongangNews?page=1&Keyword=%EB%94%A5%EB%9F%AC%EB%8B%9D&SortType=New&SearchCategoryType=JoongangNews")
+# 각 게시글의 링크주소를 추출
+def ebs_bestdoctor_href(page):
+    params1=[]
+    for i in range(1,page+1):
+        # 해당 사이트 주소 입력
+        list_url = "https://bestdoctors.ebs.co.kr/bestdoctors/board/6/510093/list?c.page="+str(i)+"&fileClsCd=ANY&hmpMnuId=101&searchCondition=&searchConditionValue=0&searchKeywordValue=0&searchKeyword=&bbsId=510093&"
+        url = urllib.request.Request(list_url)
+        html = urllib.request.urlopen(url).read().decode("utf-8")
+        soup = bs(html,'html.parser')
+        params2 = []
+        notice = 0
+        for j in  soup.find_all('div',class_='txtcut'): #공지사항 7개 제외
+            if notice >= 7:       
+                for k in j.find_all('a'):
+                    # 기본 주소에 각 링크 주소 패턴을 결합하여 최종 주소를 리스트에 추가
+                    params2.append("https://bestdoctors.ebs.co.kr"+k.get("href"))
+            notice += 1
+        params1 += params2
+    return params1
 
-# 페이지의 기사제목별 링크 수집
-html = browser.page_source   # 해당 페이지의 html 가져오기
-soup = bs(html, "html.parser")   #html을 bs로 파싱
-href_list = []
-for i in soup.find_all('h2',class_='headline mg'):   # html에서 태그와 클래스 이용해서 href 주소 가져오기
-    for j in i.find_all('a'):
-        href_list.append(j.get('href'))
-        
-# 각 기사별 댓글 수집
-text = []
-for i in href_list:
-    browser.get(i)
-    time.sleep(3)
-    html = browser.page_source
-    soup = bs(html, 'html.parser')
-    for i in soup.find_all('p',class_='content'):
-        text.append(i.text.strip())
-
-print(text)
-browser.quit()   # 브라우저 종료
+# 링크 주소의 게시글 내용을 파일로 저장
+def ebs_bestdoctor_text(url_list):
+    f = open("d:\\data\\ebs_bestdoctor.txt","w")
+    cnt = 1   # 텍스트에 저장할 때 순번 부여
+    for i in url_list:
+        url = urllib.request.Request(i)
+        html = urllib.request.urlopen(url).read().decode("utf8")
+        soup = bs(html, "html.parser")
+        for j in soup.find_all('div', class_ = "con_txt"):
+            f.write(str(cnt)+": "+re.sub('[\xa0\n\t\r]', "", j.get_text(" ", strip=True))+'\n')
+            cnt += 1   # 게시글 추가할 때마다 순번을 하나씩 올림
+    f.close()
+    
+# 함수 실행
+url_list = ebs_bestdoctor_href(1)   # 페이지수 입력
+ebs_bestdoctor_text(url_list)
